@@ -1,0 +1,68 @@
+<%- include('layout', {body: true}) %>
+
+<div class="row justify-content-center pt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h4>Register New Account</h4>
+            </div>
+            <div class="card-body">
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Register</button>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">Already registered? <a href="/login">Login here</a></p>
+                <div id="message" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = e.target.username.value;
+        const email = e.target.email.value;
+        const password = e.target.password.value;
+        const messageDiv = document.getElementById('message');
+        messageDiv.className = 'text-info';
+        messageDiv.textContent = 'Registering...';
+        
+        try {
+            const response = await fetch(`${API_URL}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            
+            const data = await response.json();
+
+            if (response.ok) {
+                messageDiv.className = 'text-success';
+                messageDiv.textContent = "Registration successful! Redirecting to login...";
+                setTimeout(() => {
+                    window.location.href = '/login'; 
+                }, 2000);
+            } else {
+                messageDiv.className = 'text-danger';
+                messageDiv.textContent = data.message || "Registration failed.";
+            }
+        } catch (error) {
+            messageDiv.className = 'text-danger';
+            messageDiv.textContent = error.message || "An unexpected error occurred.";
+        }
+    });
+</script>

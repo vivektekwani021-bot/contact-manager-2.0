@@ -1,0 +1,62 @@
+<%- include('layout', {body: true}) %>
+
+<div class="row justify-content-center pt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header text-center bg-success text-white">
+                <h4>User Login</h4>
+            </div>
+            <div class="card-body">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Login</button>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">Need an account? <a href="/register">Register here</a></p>
+                <div id="message" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = e.target.email.value;
+        const password = e.target.password.value;
+        const messageDiv = document.getElementById('message');
+        messageDiv.textContent = '';
+        messageDiv.className = 'text-info';
+        messageDiv.textContent = 'Logging in...';
+        
+        try {
+            const response = await fetch(`${API_URL}/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+
+            if (response.ok && data.accesstoken) {
+                // SUCCESS: Store the token and redirect to the contacts page
+                localStorage.setItem('token', data.accesstoken);
+                window.location.href = '/contacts'; 
+            } else {
+                messageDiv.className = 'text-danger';
+                messageDiv.textContent = data.message || "Login failed. Check credentials.";
+            }
+        } catch (error) {
+            messageDiv.className = 'text-danger';
+            messageDiv.textContent = "An unexpected error occurred during login.";
+        }
+    });
+</script>

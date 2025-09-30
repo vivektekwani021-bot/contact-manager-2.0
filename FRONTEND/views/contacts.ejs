@@ -1,0 +1,163 @@
+<%- include('layout', {body: true}) %>
+
+<div class="container-fluid pt-3">
+    <h2 class="d-inline-block">My Contacts</h2>
+    
+    <div class="float-end">
+        <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#contactModal" onclick="prepareCreate()">
+            + Add New Contact
+        </button>
+        <button class="btn btn-secondary" onclick="logout()">Logout</button>
+    </div>
+
+    <table class="table table-striped table-hover mt-3">
+        <thead class="table-primary">
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="contactsList">
+            <tr><td colspan="4">Loading contacts...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="contactModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add New Contact</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="contactForm">
+                    <input type="hidden" id="contactId">
+                    <div class="mb-3">
+                        <label for="contactName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="contactName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contactEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="contactEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contactPhone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="contactPhone" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="saveButton">Save Contact</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Redirect if no token is found on load (first check)
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/login';
+        } else {
+            loadContacts();
+        }
+    });
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+    }
+
+    // --- R: Read All Contacts (GET /api/contacts) ---
+    async function loadContacts() {
+        const contactsList = document.getElementById('contactsList');
+        contactsList.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        
+        try {
+            const contacts = await authenticatedFetch('/contacts'); // GET /api/contacts
+            contactsList.innerHTML = ''; // Clear loading text
+            
+            if (contacts.length === 0) {
+                contactsList.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No contacts found. Click "Add New Contact" to start.</td></tr>';
+                return;
+            }
+
+            contacts.forEach(contact => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${contact.name}</td>
+                    <td>${contact.email}</td>
+                    <td>${contact.phone}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="prepareUpdate('${contact._id}')" data-bs-toggle="modal" data-bs-target="#contactModal">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteContact('${contact._id}')">Delete</button>
+                    </td>
+                `;
+                contactsList.appendChild(row);
+            });
+        } catch (error) {
+            // Error handling is mostly done in api.js (redirect to login)
+            contactsList.innerHTML = `<tr><td colspan="4" class="text-danger">Failed to load contacts: ${error.message}</td></tr>`;
+        }
+    }
+
+    // --- C & U: Create and Update Handler ---
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('contactId').value;
+        const name = e.target.contactName.value;
+        const email = e.target.contactEmail.value;
+        const phone = e.target.contactPhone.value;
+        
+        const method = id ? 'PUT' : 'POST';
+        const endpoint = id ? `/contacts/${id}` : '/contacts'; // PUT or POST endpoint
+
+        try {
+            await authenticatedFetch(endpoint, {
+                method: method,
+                body: JSON.stringify({ name, email, phone })
+            });
+            
+            // Close modal, refresh list
+            const modal = bootstrap.Modal.getInstance(document.getElementById('contactModal'));
+            modal.hide();
+            loadContacts();
+        } catch (error) {
+            alert(`Operation failed: ${error.message}`);
+        }
+    });
+
+    // Prepare modal for creating a new contact
+    function prepareCreate() {
+        document.getElementById('modalTitle').textContent = 'Add New Contact';
+        document.getElementById('contactForm').reset();
+        document.getElementById('contactId').value = ''; 
+    }
+
+    // Prepare modal for updating an existing contact (R: Read Single Contact GET /api/contacts/:id)
+    async function prepareUpdate(id) {
+        document.getElementById('modalTitle').textContent = 'Update Contact';
+        try {
+            const contact = await authenticatedFetch(`/contacts/${id}`); // GET /api/contacts/:id
+            document.getElementById('contactId').value = contact._id;
+            document.getElementById('contactName').value = contact.name;
+            document.getElementById('contactEmail').value = contact.email;
+            document.getElementById('contactPhone').value = contact.phone;
+        } catch (error) {
+            alert(`Failed to load contact details: ${error.message}`);
+        }
+    }
+
+    // --- D: Delete Contact (DELETE /api/contacts/:id) ---
+    async function deleteContact(id) {
+        if (confirm('Are you sure you want to permanently delete this contact?')) {
+            try {
+                await authenticatedFetch(`/contacts/${id}`, { method: 'DELETE' });
+                loadContacts(); // Refresh list after deletion
+            } catch (error) {
+                alert(`Deletion failed: ${error.message}`);
+            }
+        }
+    }
+</script>
