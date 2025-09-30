@@ -1,14 +1,22 @@
+// 
 const express = require("express");
+const cors = require("cors"); // <--- 1. IMPORT CORS
 const errorHandler = require("./middlewares/errorhandler");
 const connectDb = require("./config/dbConnection");
 const dotenv = require("dotenv").config();
 const app = express();
 const port = process.env.PORT;
 
-
 connectDb();
-//const mongoose =  require("mongoose")
-//mongoose.connect("mongodb+srv://viveknotes21_db_user:vivekmongodb2121@vivek-tekwani-cluster.alufaqy.mongodb.net/?retryWrites=true&w=majority&appName=Vivek-tekwani-cluster")
+
+// 2. CONFIGURE AND USE CORS MIDDLEWARE
+// The 'origin' MUST match the URL your frontend is running on (http://localhost:3000)
+app.use(cors({
+    origin: 'http://localhost:3000', 
+    credentials: true // Important for handling cookies/sessions for authentication
+}));
+
+
 // MIDDLEWARE TO GET CLIENT JSON DATA ON SERVER
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
